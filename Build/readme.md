@@ -15,3 +15,5 @@
    mkdir build
    cd build
    cmake ..
+### 可执行文件
+   可以跳过编译直接运行Editor.exe。
