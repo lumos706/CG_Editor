@@ -16,4 +16,4 @@
    cd build
    cmake ..
 ### 可执行文件
-   可以跳过编译直接运行Editor.exe。
+   可以跳过编译，直接**在当前目录**运行Editor.exe
