@@ -12,7 +12,10 @@
 #include <cstdlib>
 #include <iostream>
 #include <filesystem>
+#include <windows.h>
+#include <commdlg.h>
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void setupLightingAndMaterial(Shader& Shader);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
@@ -20,6 +23,8 @@ bool castRay(GLFWwindow* window, glm::vec3& outHitPoint, Model*& selectedModel);
 void setCube(float* vertices);
 unsigned int loadTexture(std::vector< std::string> faces);
 unsigned int loadTexture_heightmap(const char* path);
+glm::vec3 RayTerrainIntersection(GLFWwindow* window, const std::vector<Vertex>& vertices, int width, int height, float gridSpacing);
+std::string openFileDialog();
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -33,12 +38,27 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-std::vector<Model*> models;  // ´æ´¢ËùÓĞÄ£ĞÍµÄÁĞ±í
+//models
+std::vector<Model*> models;  // å­˜å‚¨æ‰€æœ‰æ¨¡å‹çš„åˆ—è¡¨
 Model init(camera);
 extern Model* selectedModel = &init;
 
 //lighting
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 pointLightPositions[] = {
+    glm::vec3(0.1f,  0.2f,  0.5f),
+    glm::vec3(2.3f, -1.3f, -4.0f),
+    glm::vec3(-4.0f,  2.0f, -12.0f),
+    glm::vec3(0.0f,  0.0f, -3.0f)
+};
+
+//åœ°å½¢å›¾
+float heightScale = 2.5f;
+float gridSpacing = 0.25f;
+std::vector<Vertex> terrainVertices;
+std::vector<unsigned int> terrainIndices;
+int Width, Height;
+
 int main(int argc, char* argv[]) {
     //std::cout << "init:"<<selectedModel << endl;
     //std::cout << "Current Working Directory: " << std::filesystem::current_path() << std::endl;
@@ -63,7 +83,7 @@ int main(int argc, char* argv[]) {
     glfwSetCursorPosCallback(mWindow, mouse_callback);
     glfwSetScrollCallback(mWindow, scroll_callback);
 
-    // Êó±ê
+    // é¼ æ ‡
     glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 
@@ -85,12 +105,10 @@ int main(int argc, char* argv[]) {
     // build and compile shaders
     // -------------------------
     Shader ourShader("../Editor/Shaders/1.model_loading.vs", "../Editor/Shaders/1.model_loading.fs");
-    Shader ourShader2("../Editor/Shaders/1.model_loading.vs", "../Editor/Shaders/1.model_loading.fs");
-    Shader ourShader3("../Editor/Shaders/1.model_loading.vs", "../Editor/Shaders/1.model_loading.fs");
     Shader terrainShader("../Editor/Shaders/heightmap.vs", "../Editor/Shaders/heightmap.fs");
     Shader lightCubeShader("../Editor/Shaders/light_cube.vs", "../Editor/Shaders/light_cube.fs");
     Shader skyBoxShader("../Editor/Shaders/skybox.vs", "../Editor/Shaders/skybox.fs");
-    // load models£¬Èç¹ûĞèÒªµ¼ÈëĞÂÄ£ĞÍ£¬ÔÚ´ËÔö¼Ó
+    // load modelsï¼Œå¦‚æœéœ€è¦å¯¼å…¥æ–°æ¨¡å‹ï¼Œåœ¨æ­¤å¢åŠ 
     // -----------
     Model tentmodel(camera,"../Editor/Models/lowpolytent.obj");
     //cout << "tentmodel:" << &tentmodel << endl;
@@ -101,16 +119,14 @@ int main(int argc, char* argv[]) {
 
     Model treemodel_2(camera, "../Editor/Models/Tree.obj");
     models.push_back(&treemodel_2);
-
-
+    /*string path1 = "C:/Users/10559/Desktop/Study/Three/CG/CV_Editor/Editor/Models/lowpolytent.obj";
+    string path2 = "C:/Users/10559/Desktop/Study/Three/CG/CV_Editor/Editor/Models/Tree.obj";
+    createmodel(path1);
+    createmodel(path2);
+    createmodel(path2);*/
 
     unsigned int VBO, cubeVAO;
-    glm::vec3 pointLightPositions[] = {
-    glm::vec3(0.1f,  0.2f,  0.5f),
-    glm::vec3(2.3f, -1.3f, -4.0f),
-    glm::vec3(-4.0f,  2.0f, -12.0f),
-    glm::vec3(0.0f,  0.0f, -3.0f)
-    }; 
+    
     float vertices[288]{
         // positions          // normals           // texture coords
         -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
@@ -238,13 +254,14 @@ int main(int argc, char* argv[]) {
 
     skyBoxShader.use();
     skyBoxShader.setInt("sky", 0);
-    std::vector<Vertex> terrainVertices;
-    std::vector<unsigned int> terrainIndices;
-    HeightMap::GenerateTerrainFromHeightMap("../Editor/Objects/Heightmap.png", 2.5f, 0.25f, terrainVertices, terrainIndices);
+    
+    HeightMap::GenerateTerrainFromHeightMap(Width, Height, "../Editor/Objects/Heightmap.png", heightScale, gridSpacing, terrainVertices, terrainIndices);
+    //cout << Width << " " << Height << endl;
+    //cout << terrainVertices.size() << endl;
     // Create a Mesh object for the terrain
     Mesh terrain(terrainVertices, terrainIndices, std::vector<Texture>());
     unsigned int grassTexture = loadTexture_heightmap("../Editor/Models/dark_grass.jpg");
-    // °ó¶¨ÎÆÀíµ½ÎÆÀíµ¥Ôª 0
+    // ç»‘å®šçº¹ç†åˆ°çº¹ç†å•å…ƒ 0
     
     
 
@@ -276,7 +293,7 @@ int main(int argc, char* argv[]) {
         terrainShader.setInt("texture_diffuse1", 1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, grassTexture);
-        // ÉèÖÃ `texture_diffuse1` uniform Ö¸¶¨ÎªÎÆÀíµ¥Ôª 1
+        // è®¾ç½® `texture_diffuse1` uniform æŒ‡å®šä¸ºçº¹ç†å•å…ƒ 1
 
         terrainShader.setMat4("model", model);
         terrainShader.setMat4("view", view);
@@ -333,221 +350,20 @@ int main(int argc, char* argv[]) {
         terrainShader.setFloat("material.shininess", 64.0f);
         terrain.Draw(terrainShader);
         // don't forget to enable shader before setting uniforms
-        ourShader.use();
-
-        // directional light
-        ourShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-        ourShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
-        ourShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
-        ourShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
-        // point light 1
-        ourShader.setVec3("pointLights[0].position", pointLightPositions[0]);
-        ourShader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
-        ourShader.setFloat("pointLights[0].constant", 1.0f);
-        ourShader.setFloat("pointLights[0].linear", 0.09f);
-        ourShader.setFloat("pointLights[0].quadratic", 0.032f);
-        // point light 2
-        ourShader.setVec3("pointLights[1].position", pointLightPositions[1]);
-        ourShader.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
-        ourShader.setFloat("pointLights[1].constant", 1.0f);
-        ourShader.setFloat("pointLights[1].linear", 0.09f);
-        ourShader.setFloat("pointLights[1].quadratic", 0.032f);
-        // point light 3
-        ourShader.setVec3("pointLights[2].position", pointLightPositions[2]);
-        ourShader.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
-        ourShader.setFloat("pointLights[2].constant", 1.0f);
-        ourShader.setFloat("pointLights[2].linear", 0.09f);
-        ourShader.setFloat("pointLights[2].quadratic", 0.032f);
-        // point light 4
-        ourShader.setVec3("pointLights[3].position", pointLightPositions[3]);
-        ourShader.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
-        ourShader.setFloat("pointLights[3].constant", 1.0f);
-        ourShader.setFloat("pointLights[3].linear", 0.09f);
-        ourShader.setFloat("pointLights[3].quadratic", 0.032f);
-        // spotLight
-        ourShader.setVec3("spotLight.position", camera.Position);
-        ourShader.setVec3("spotLight.direction", camera.Front);
-        ourShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-        ourShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-        ourShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-        ourShader.setFloat("spotLight.constant", 1.0f);
-        ourShader.setFloat("spotLight.linear", 0.09f);
-        ourShader.setFloat("spotLight.quadratic", 0.032f);
-        ourShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-        ourShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
-
-
-        ourShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-        // material properties
-        ourShader.setFloat("material.shininess", 64.0f);
-        // view/projection transformations
-        projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        view = camera.GetViewMatrix();
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
-
-        //second shader
-        ourShader2.use();
-
-        // directional light
-        ourShader2.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-        ourShader2.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
-        ourShader2.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
-        ourShader2.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
-        // point light 1
-        ourShader2.setVec3("pointLights[0].position", pointLightPositions[0]);
-        ourShader2.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader2.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader2.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
-        ourShader2.setFloat("pointLights[0].constant", 1.0f);
-        ourShader2.setFloat("pointLights[0].linear", 0.09f);
-        ourShader2.setFloat("pointLights[0].quadratic", 0.032f);
-        // point light 2
-        ourShader2.setVec3("pointLights[1].position", pointLightPositions[1]);
-        ourShader2.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader2.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader2.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
-        ourShader2.setFloat("pointLights[1].constant", 1.0f);
-        ourShader2.setFloat("pointLights[1].linear", 0.09f);
-        ourShader2.setFloat("pointLights[1].quadratic", 0.032f);
-        // point light 3
-        ourShader2.setVec3("pointLights[2].position", pointLightPositions[2]);
-        ourShader2.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader2.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader2.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
-        ourShader2.setFloat("pointLights[2].constant", 1.0f);
-        ourShader2.setFloat("pointLights[2].linear", 0.09f);
-        ourShader2.setFloat("pointLights[2].quadratic", 0.032f);
-        // point light 4
-        ourShader2.setVec3("pointLights[3].position", pointLightPositions[3]);
-        ourShader2.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader2.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader2.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
-        ourShader2.setFloat("pointLights[3].constant", 1.0f);
-        ourShader2.setFloat("pointLights[3].linear", 0.09f);
-        ourShader2.setFloat("pointLights[3].quadratic", 0.032f);
-        // spotLight
-        ourShader2.setVec3("spotLight.position", camera.Position);
-        ourShader2.setVec3("spotLight.direction", camera.Front);
-        ourShader2.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-        ourShader2.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-        ourShader2.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-        ourShader2.setFloat("spotLight.constant", 1.0f);
-        ourShader2.setFloat("spotLight.linear", 0.09f);
-        ourShader2.setFloat("spotLight.quadratic", 0.032f);
-        ourShader2.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-        ourShader2.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
-
-
-        ourShader2.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-        // material properties
-        ourShader2.setFloat("material.shininess", 64.0f);
-        // view/projection transformations
-        projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        view = camera.GetViewMatrix();
-        ourShader2.setMat4("projection", projection);
-        ourShader2.setMat4("view", view);
-
-        //third shader
-        ourShader3.use();
-
-        // directional light
-        ourShader3.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-        ourShader3.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
-        ourShader3.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
-        ourShader3.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
-        // point light 1
-        ourShader3.setVec3("pointLights[0].position", pointLightPositions[0]);
-        ourShader3.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader3.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader3.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
-        ourShader3.setFloat("pointLights[0].constant", 1.0f);
-        ourShader3.setFloat("pointLights[0].linear", 0.09f);
-        ourShader3.setFloat("pointLights[0].quadratic", 0.032f);
-        // point light 2
-        ourShader3.setVec3("pointLights[1].position", pointLightPositions[1]);
-        ourShader3.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader3.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader3.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
-        ourShader3.setFloat("pointLights[1].constant", 1.0f);
-        ourShader3.setFloat("pointLights[1].linear", 0.09f);
-        ourShader3.setFloat("pointLights[1].quadratic", 0.032f);
-        // point light 3
-        ourShader3.setVec3("pointLights[2].position", pointLightPositions[2]);
-        ourShader3.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader3.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader3.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
-        ourShader3.setFloat("pointLights[2].constant", 1.0f);
-        ourShader3.setFloat("pointLights[2].linear", 0.09f);
-        ourShader3.setFloat("pointLights[2].quadratic", 0.032f);
-        // point light 4
-        ourShader3.setVec3("pointLights[3].position", pointLightPositions[3]);
-        ourShader3.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
-        ourShader3.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
-        ourShader3.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
-        ourShader3.setFloat("pointLights[3].constant", 1.0f);
-        ourShader3.setFloat("pointLights[3].linear", 0.09f);
-        ourShader3.setFloat("pointLights[3].quadratic", 0.032f);
-        // spotLight
-        ourShader3.setVec3("spotLight.position", camera.Position);
-        ourShader3.setVec3("spotLight.direction", camera.Front);
-        ourShader3.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-        ourShader3.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-        ourShader3.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-        ourShader3.setFloat("spotLight.constant", 1.0f);
-        ourShader3.setFloat("spotLight.linear", 0.09f);
-        ourShader3.setFloat("spotLight.quadratic", 0.032f);
-        ourShader3.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-        ourShader3.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
-
-
-        ourShader3.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
-        // material properties
-        ourShader3.setFloat("material.shininess", 64.0f);
-        // view/projection transformations
-        projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        view = camera.GetViewMatrix();
-        ourShader3.setMat4("projection", projection);
-        ourShader3.setMat4("view", view);
-
-
-
-
-        //// render the loaded model
-        //model = glm::mat4(1.0f);
-        //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        //model = glm::scale(model, glm::vec3(1.0f));	// it's a bit too big for our scene, so scale it down
-        //ourShader.setMat4("model", model);
-        // »ñÈ¡Ä£ĞÍ¾ØÕó²¢´«µİµ½×ÅÉ«Æ÷
+        setupLightingAndMaterial(ourShader);
         
-        //cout << tentmodel.position << endl;
-        glm::mat4 tent_modelMatrix = tentmodel.GetModelMatrix();
-        ourShader.setMat4("model", tent_modelMatrix);
-        tentmodel.Draw(ourShader);
-
-        glm::mat4 tree_modelMatrix2 = treemodel_2.GetModelMatrix();
-        ourShader2.setMat4("model", tree_modelMatrix2);
-        treemodel_2.Draw(ourShader2);
-
-        glm::mat4 tree_modelMatrix = treemodel.GetModelMatrix();
-        ourShader3.setMat4("model", tree_modelMatrix);
-        treemodel.Draw(ourShader3);
-
-
+        for (auto& item : models) {
+            glm::mat4 modelmatrix = (*item).GetModelMatrix();
+            //cout << models.size();
+            ourShader.setMat4("model", modelmatrix);
+            (*item).Draw(ourShader);
+        }
 
         //cout << "ourmodel.position:" << tentmodel.position << endl;
 
         glDepthFunc(GL_LEQUAL);
         skyBoxShader.use();
-        // ´«ÊÓÍ¼,Í¶Ó°¾ØÕó
+        // ä¼ è§†å›¾,æŠ•å½±çŸ©é˜µ
         view = glm::mat4(glm::mat3(camera.GetViewMatrix())); // remove translation from the view matrix
         skyBoxShader.setMat4("view", view);
         skyBoxShader.setMat4("projection", projection);
@@ -588,12 +404,26 @@ int main(int argc, char* argv[]) {
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow* window)
 {
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+        glm::vec3 hitPoint = RayTerrainIntersection(window, terrainVertices, Width, Height, gridSpacing);
+
+        //cout << hitPoint << endl;
+        std::string selectedFile = openFileDialog();
+        cout << selectedFile << endl;
+        Model* insertmodel = new Model(camera, selectedFile, false, hitPoint);
+        float ModelHeight = (*insertmodel).GetHeight();
+        (*insertmodel).position += ModelHeight / 2;
+        models.push_back(insertmodel); // å°†æŒ‡é’ˆå­˜å…¥ models å®¹å™¨ä¸­
+
+        cout << ((*insertmodel).position) << endl;
+        //cout << models.size();
+    }
     if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
-        // Ö´ĞĞÉäÏßÍ¶Éä¼ì²â
+        // æ‰§è¡Œå°„çº¿æŠ•å°„æ£€æµ‹
         glm::vec3 hitPoint;
         if (castRay(window, hitPoint, selectedModel)) {
             std::cout << "Select()" << endl;
-            // Èç¹û¼ì²âµ½µã»÷Ä£ĞÍ£¬¸üĞÂÑ¡ÖĞ×´Ì¬
+            // å¦‚æœæ£€æµ‹åˆ°ç‚¹å‡»æ¨¡å‹ï¼Œæ›´æ–°é€‰ä¸­çŠ¶æ€
             (*selectedModel).Select();
             cout << "select_modle" << (&selectedModel) << endl;
             for (auto& model : models) {
@@ -613,7 +443,7 @@ void processInput(GLFWwindow* window)
     }
     if ((*selectedModel).isSelected) {
         //cout << "model" << endl;
-        // Ö»ÓĞÑ¡ÖĞÄ£ĞÍÊ±£¬²ÅÒÆ¶¯Ä£ĞÍ
+        // åªæœ‰é€‰ä¸­æ¨¡å‹æ—¶ï¼Œæ‰ç§»åŠ¨æ¨¡å‹
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             cout << "hello";
             //(*selectedModel).position += glm::vec3(0.0f, 0.0f, 10.0f);
@@ -633,8 +463,9 @@ void processInput(GLFWwindow* window)
             (*selectedModel).Move(DOWN, deltaTime);
     }
     else {
-    // ·ñÔò¼ÌĞø¿ØÖÆÏà»ú
+    // å¦åˆ™ç»§ç»­æ§åˆ¶ç›¸æœº
         //cout << "camera" << endl;
+        
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -648,9 +479,9 @@ void processInput(GLFWwindow* window)
         camera.ProcessKeyboard(RIGHT, deltaTime);
 
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        camera.ProcessKeyboard(UP, deltaTime); // ÏòÉÏ
+        camera.ProcessKeyboard(UP, deltaTime); // å‘ä¸Š
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        camera.ProcessKeyboard(DOWN, deltaTime); // ÏòÏÂ
+        camera.ProcessKeyboard(DOWN, deltaTime); // å‘ä¸‹
     }
 }
 
@@ -663,15 +494,15 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-//¼ì²âÄ£ĞÍÊÇ·ñ±»Ñ¡ÖĞ
-// ÉäÏßÍ¶ÉäµÄ¹¦ÄÜ£º´ÓÏà»úµÄÎ»ÖÃºÍ·½Ïò·¢ÉäÒ»ÌõÉäÏß£¬²¢¼ì²âÓëÄ£ĞÍµÄ½»µã
+//æ£€æµ‹æ¨¡å‹æ˜¯å¦è¢«é€‰ä¸­
+// å°„çº¿æŠ•å°„çš„åŠŸèƒ½ï¼šä»ç›¸æœºçš„ä½ç½®å’Œæ–¹å‘å‘å°„ä¸€æ¡å°„çº¿ï¼Œå¹¶æ£€æµ‹ä¸æ¨¡å‹çš„äº¤ç‚¹
 bool castRay(GLFWwindow* window, glm::vec3& outHitPoint, Model*& selectedModel)
 {
-    // »ñÈ¡Ïà»úÊÓ½ÇºÍÍ¶Ó°¾ØÕó
+    // è·å–ç›¸æœºè§†è§’å’ŒæŠ•å½±çŸ©é˜µ
     glm::mat4 view = camera.GetViewMatrix();
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
-    // »ñÈ¡Êó±êÎ»ÖÃ
+    // è·å–é¼ æ ‡ä½ç½®
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     xpos = (xpos / SCR_WIDTH) * 2.0 - 1.0;
@@ -686,15 +517,15 @@ bool castRay(GLFWwindow* window, glm::vec3& outHitPoint, Model*& selectedModel)
     //std::cout << "rayorigin:" << rayOrigin << endl;
     glm::vec3 rayDirection = glm::normalize(rayWorldSpace);
     //std::cout << "raydirection:" << rayDirection << endl;
-    // ¼ì²âÓëÄ£ĞÍµÄ½»µã£¨¿ÉÒÔÊ¹ÓÃAABB»òÆäËû·½Ê½£©
+    // æ£€æµ‹ä¸æ¨¡å‹çš„äº¤ç‚¹ï¼ˆå¯ä»¥ä½¿ç”¨AABBæˆ–å…¶ä»–æ–¹å¼ï¼‰
     /*for (auto& model : models) {
         cout <<"model:" << model << endl;
     }*/
     for (auto& model : models) {
         if ((*model).Intersects(rayOrigin, rayDirection)) {
             cout << "some model is selected" << endl;
-            selectedModel = model;  // ¸üĞÂÑ¡ÖĞµÄÄ£ĞÍ
-            cout << "Ñ¡ÖĞºóµÄselectmodel:"<<( & selectedModel) << endl;
+            selectedModel = model;  // æ›´æ–°é€‰ä¸­çš„æ¨¡å‹
+            cout << "é€‰ä¸­åçš„selectmodel:"<<( & selectedModel) << endl;
             outHitPoint = (*model).GetIntersectionPoint(rayOrigin, rayDirection);
             return true;
         }
@@ -712,7 +543,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 
     static bool isDragging = false;
     int leftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-    int rightButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);  // ¼ì²éÓÒ¼üÊÇ·ñ°´ÏÂ
+    int rightButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);  // æ£€æŸ¥å³é”®æ˜¯å¦æŒ‰ä¸‹
     
     if (leftButtonState == GLFW_PRESS) {
         if (!isDragging) {
@@ -727,34 +558,34 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
         lastX = xpos;
         lastY = ypos;
 
-        float sensitivity = 1.0f; // µ÷ÕûÁéÃô¶È
+        float sensitivity = 1.0f; // è°ƒæ•´çµæ•åº¦
         camera.ProcessMouseMovement(xoffset * sensitivity, yoffset * sensitivity);
     }
-    if (rightButtonState == GLFW_PRESS) {  // Èç¹ûÓÒ¼ü°´ÏÂ
+    if (rightButtonState == GLFW_PRESS) {  // å¦‚æœå³é”®æŒ‰ä¸‹
         if (!isDragging) {
             isDragging = true;
             lastX = xpos;
             lastY = ypos;
         }
 
-        // ¼ÆËãÊó±êÒÆ¶¯µÄÆ«ÒÆÁ¿
+        // è®¡ç®—é¼ æ ‡ç§»åŠ¨çš„åç§»é‡
         float xoffset = xpos - lastX;
         float yoffset = lastY - ypos;
 
         lastX = xpos;
         lastY = ypos;
 
-        // ÉèÖÃĞı×ªÁéÃô¶È
+        // è®¾ç½®æ—‹è½¬çµæ•åº¦
         float sensitivity = 1.0f;
 
-        // ¸ù¾İÊó±êµÄÒÆ¶¯Á¿Ğı×ªÄ£ĞÍ
+        // æ ¹æ®é¼ æ ‡çš„ç§»åŠ¨é‡æ—‹è½¬æ¨¡å‹
         if (selectedModel) {
-            // ¸ù¾İÊó±êµÄË®Æ½ºÍ´¹Ö±Æ«ÒÆÁ¿À´Ğı×ªÄ£ĞÍ
-            (*selectedModel).Rotate(xoffset * sensitivity, glm::vec3(0.0f, 1.0f, 0.0f));  // ÈÆYÖáĞı×ª
-            (*selectedModel).Rotate(yoffset * sensitivity, glm::vec3(-1.0f, 0.0f, 0.0f));  // ÈÆXÖáĞı×ª
+            // æ ¹æ®é¼ æ ‡çš„æ°´å¹³å’Œå‚ç›´åç§»é‡æ¥æ—‹è½¬æ¨¡å‹
+            (*selectedModel).Rotate(xoffset * sensitivity, glm::vec3(0.0f, 1.0f, 0.0f));  // ç»•Yè½´æ—‹è½¬
+            (*selectedModel).Rotate(yoffset * sensitivity, glm::vec3(-1.0f, 0.0f, 0.0f));  // ç»•Xè½´æ—‹è½¬
         }
     }
-    if (rightButtonState == GLFW_RELEASE&&leftButtonState == GLFW_RELEASE) {  // Èç¹ûÓÒ¼üÊÍ·Å
+    if (rightButtonState == GLFW_RELEASE&&leftButtonState == GLFW_RELEASE) {  // å¦‚æœå³é”®é‡Šæ”¾
         isDragging = false;
     }
 }
@@ -767,8 +598,8 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     if ((*selectedModel).isSelected) {
-        // Ö»ÓĞÑ¡ÖĞµÄÄ£ĞÍ²Å½øĞĞËõ·Å
-        float scaleFactor = 1.0f + static_cast<float>(yoffset) * 0.1f; // Ëõ·ÅÏµÊı
+        // åªæœ‰é€‰ä¸­çš„æ¨¡å‹æ‰è¿›è¡Œç¼©æ”¾
+        float scaleFactor = 1.0f + static_cast<float>(yoffset) * 0.1f; // ç¼©æ”¾ç³»æ•°
         (*selectedModel).Scale(scaleFactor);
     }
     else {
@@ -779,7 +610,7 @@ void setCube(float* vertices)
 {
 
 }
-// ¼ÓÔØÎÆÀíº¯Êı
+// åŠ è½½çº¹ç†å‡½æ•°
 unsigned int loadTexture_heightmap(const char* path) {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -800,7 +631,7 @@ unsigned int loadTexture_heightmap(const char* path) {
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        // ÉèÖÃÎÆÀí²ÎÊı
+        // è®¾ç½®çº¹ç†å‚æ•°
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -842,4 +673,176 @@ unsigned int loadTexture(std::vector<std::string> faces)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     return textureID;
+}
+
+glm::vec3 RayTerrainIntersection(
+    GLFWwindow* window,
+    const std::vector<Vertex>& vertices,
+    int width,
+    int height,
+    float gridSpacing)
+{
+    // è·å–ç›¸æœºè§†è§’å’ŒæŠ•å½±çŸ©é˜µ
+    glm::mat4 view = camera.GetViewMatrix();
+    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom),
+        (float)SCR_WIDTH / (float)SCR_HEIGHT,
+        0.1f, 100.0f);
+
+    // è·å–é¼ æ ‡ä½ç½®
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+    xpos = (xpos / SCR_WIDTH) * 2.0 - 1.0;
+    ypos = -(ypos / SCR_HEIGHT) * 2.0 + 1.0;
+
+    // å°†é¼ æ ‡ä½ç½®ä»è£å‰ªåæ ‡ç³»è½¬æ¢åˆ°ä¸–ç•Œåæ ‡ç³»
+    glm::vec4 rayClipSpace = glm::vec4(xpos, ypos, -1.0f, 1.0f);
+    glm::vec4 rayEyeSpace = glm::inverse(projection) * rayClipSpace;
+    rayEyeSpace = glm::vec4(rayEyeSpace.x, rayEyeSpace.y, -1.0f, 0.0f);
+
+    glm::vec3 rayWorldSpace = glm::vec3(glm::inverse(view) * rayEyeSpace);
+    glm::vec3 rayOrigin = camera.Position;
+    glm::vec3 rayDirection = glm::normalize(rayWorldSpace);
+    // è®¾ç½®åˆå§‹æ­¥é•¿å’Œæœ€å¤§è¿­ä»£æ¬¡æ•°
+    float tMin = 0.0f, tMax = 1000.0f;
+    const int maxIterations = 100;
+
+    for (int i = 0; i < maxIterations; ++i) {
+        float tMid = (tMin + tMax) * 0.5f;
+        glm::vec3 currentPoint = rayOrigin + tMid * rayDirection;
+
+        // è·å–ç½‘æ ¼åæ ‡
+        int x = static_cast<int>((currentPoint.x + (width * gridSpacing / 2.0f)) / gridSpacing);
+        int z = static_cast<int>((currentPoint.z + (height * gridSpacing / 2.0f)) / gridSpacing);
+
+        // åˆ¤æ–­æ˜¯å¦è¶Šç•Œ
+        if (x < 0 || x >= width - 1 || z < 0 || z >= height - 1) {
+            tMax = tMid; // è¶…å‡ºèŒƒå›´ï¼Œå‘è¾ƒå°tæ–¹å‘æ”¶ç¼©
+            continue;
+        }
+
+        // è·å–å‘¨å›´çš„é«˜åº¦ç‚¹
+        float h00 = vertices[z * width + x].Position.y;
+        float h10 = vertices[z * width + (x + 1)].Position.y;
+        float h01 = vertices[(z + 1) * width + x].Position.y;
+        float h11 = vertices[(z + 1) * width + (x + 1)].Position.y;
+
+        // è®¡ç®—åŒçº¿æ€§æ’å€¼é«˜åº¦
+        float localX = (currentPoint.x + (width * gridSpacing / 2.0f)) / gridSpacing - x;
+        float localZ = (currentPoint.z + (height * gridSpacing / 2.0f)) / gridSpacing - z;
+        float interpolatedHeight = h00 * (1 - localX) * (1 - localZ)
+            + h10 * localX * (1 - localZ)
+            + h01 * (1 - localX) * localZ
+            + h11 * localX * localZ;
+
+        // æ£€æŸ¥å½“å‰ç‚¹æ˜¯å¦ä¸åœ°å½¢ç›¸äº¤
+        if (currentPoint.y < interpolatedHeight) {
+            tMax = tMid; // å½“å‰ç‚¹ä½äºåœ°å½¢ï¼Œç¼©å°èŒƒå›´
+        }
+        else {
+            tMin = tMid; // å½“å‰ç‚¹é«˜äºåœ°å½¢ï¼Œå¢åŠ èŒƒå›´
+        }
+
+        // æ”¶æ•›æ¡ä»¶ï¼štèŒƒå›´è¶³å¤Ÿå°
+        if (glm::abs(tMax - tMin) < 0.01f) {
+            cout << "find!" << currentPoint << endl;
+            return currentPoint;
+        }
+    }
+
+    // å¦‚æœè¿­ä»£ç»“æŸåæœªæ‰¾åˆ°äº¤ç‚¹ï¼Œè¿”å›ç©ºå€¼
+    cout << "don't find!" << endl;
+    return glm::vec3(0.0f, 0.0f, 0.0f);
+}
+
+std::string openFileDialog() {
+    OPENFILENAME ofn;       // common dialog box structure
+    char szFile[260];       // buffer for file name
+
+    // Initialize OPENFILENAME
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFilter = "OBJ Files\0*.OBJ\0All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFile[0] = '\0';
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrInitialDir = NULL;
+    ofn.lpstrTitle = "Select a model file";
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+    // Display the Save As dialog box
+    if (GetOpenFileName(&ofn) == TRUE) {
+        std::string filePath = std::string(ofn.lpstrFile);
+        std::replace(filePath.begin(), filePath.end(), '\\', '/');
+        return filePath;
+    }
+
+    return "";
+}
+
+void setupLightingAndMaterial(Shader& Shader) {
+    Shader.use();
+
+    // directional light
+    Shader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+    Shader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+    Shader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+    Shader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+    // point light 1
+    Shader.setVec3("pointLights[0].position", pointLightPositions[0]);
+    Shader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
+    Shader.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
+    Shader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+    Shader.setFloat("pointLights[0].constant", 1.0f);
+    Shader.setFloat("pointLights[0].linear", 0.09f);
+    Shader.setFloat("pointLights[0].quadratic", 0.032f);
+    // point light 2
+    Shader.setVec3("pointLights[1].position", pointLightPositions[1]);
+    Shader.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
+    Shader.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
+    Shader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+    Shader.setFloat("pointLights[1].constant", 1.0f);
+    Shader.setFloat("pointLights[1].linear", 0.09f);
+    Shader.setFloat("pointLights[1].quadratic", 0.032f);
+    // point light 3
+    Shader.setVec3("pointLights[2].position", pointLightPositions[2]);
+    Shader.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
+    Shader.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
+    Shader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
+    Shader.setFloat("pointLights[2].constant", 1.0f);
+    Shader.setFloat("pointLights[2].linear", 0.09f);
+    Shader.setFloat("pointLights[2].quadratic", 0.032f);
+    // point light 4
+    Shader.setVec3("pointLights[3].position", pointLightPositions[3]);
+    Shader.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
+    Shader.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
+    Shader.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
+    Shader.setFloat("pointLights[3].constant", 1.0f);
+    Shader.setFloat("pointLights[3].linear", 0.09f);
+    Shader.setFloat("pointLights[3].quadratic", 0.032f);
+    // spotLight
+    Shader.setVec3("spotLight.position", camera.Position);
+    Shader.setVec3("spotLight.direction", camera.Front);
+    Shader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+    Shader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+    Shader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+    Shader.setFloat("spotLight.constant", 1.0f);
+    Shader.setFloat("spotLight.linear", 0.09f);
+    Shader.setFloat("spotLight.quadratic", 0.032f);
+    Shader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+    Shader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+
+
+    Shader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+    // material properties
+    Shader.setFloat("material.shininess", 64.0f);
+    // view/projection transformations
+    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    glm::mat4 view = camera.GetViewMatrix();
+    Shader.setMat4("projection", projection);
+    Shader.setMat4("view", view);
 }
