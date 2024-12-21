@@ -29,6 +29,7 @@ public:
         {
             // open files
             vShaderFile.open(vertexPath);
+            //std::cout << "Shader file path: " << vertexPath << std::endl;
             fShaderFile.open(fragmentPath);
             std::stringstream vShaderStream, fShaderStream;
             // read file's buffer contents into streams
@@ -43,6 +44,7 @@ public:
         }
         catch (std::ifstream::failure& e)
         {
+            std::cout << "Shader file path: " << vertexPath << std::endl;
             std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ: " << e.what() << std::endl;
         }
         const char* vShaderCode = vertexCode.c_str();

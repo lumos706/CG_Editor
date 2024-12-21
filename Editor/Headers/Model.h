@@ -32,9 +32,9 @@ class Model
 {
 public:
     // model data 
-    //æ‰€æœ‰åŠ è½½è¿‡çš„çº¹ç† vector 
+    //ËùÓĞ¼ÓÔØ¹ıµÄÎÆÀí vector 
     vector<Texture> textures_loaded;	// stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
-    //æ¨¡å‹æ•°æ®  
+    //Ä£ĞÍÊı¾İ  
     vector<Mesh> meshes;
     string directory;
 
@@ -46,19 +46,19 @@ public:
     glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 rotation = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
-    bool isSelected = false; // æ˜¯å¦é€‰ä¸­
+    bool isSelected = false; // ÊÇ·ñÑ¡ÖĞ
 
-    // æ–°å¢ï¼šåŒ…å›´ç›’çš„è®¡ç®—ä¸æ£€æµ‹
+    // ĞÂÔö£º°üÎ§ºĞµÄ¼ÆËãÓë¼ì²â
     glm::vec3 boundingBoxMin = glm::vec3(FLT_MAX);
     glm::vec3 boundingBoxMax = glm::vec3(-FLT_MAX);
     //std::shared_ptr<Model> modelPtr;
     Model& operator=(const Model& model) {
     }
-    // æ„é€ å‡½æ•°ï¼Œç»™å®ƒä¸€ä¸ªè·¯å¾„ï¼Œè®©ä»–ç”¨load modelæ¥åŠ è½½æ–‡ä»¶
+    // ¹¹Ôìº¯Êı£¬¸øËüÒ»¸öÂ·¾¶£¬ÈÃËûÓÃload modelÀ´¼ÓÔØÎÄ¼ş
     Model(const Camera& cam, string const& path, bool gamma = false, glm::vec3 pos = glm::vec3(0.0f,0.0f,0.0f)) : camera(cam), gammaCorrection(gamma), position(pos)
     {
         loadModel(path);
-        CalculateBoundingBox(); // è®¡ç®—åŒ…å›´ç›’
+        CalculateBoundingBox(); // ¼ÆËã°üÎ§ºĞ
         updateVectors();
     }
 
@@ -69,20 +69,20 @@ public:
     }
 
     void updateVectors() {
-        Front = camera.Front;  // å®æ—¶è·å– Front
-        Right = camera.Right; // å®æ—¶è·å– Right
-        Up = camera.Up;       // å®æ—¶è·å– Up
+        Front = camera.Front;  // ÊµÊ±»ñÈ¡ Front
+        Right = camera.Right; // ÊµÊ±»ñÈ¡ Right
+        Up = camera.Up;       // ÊµÊ±»ñÈ¡ Up
 
-        // å…¶ä»–é€»è¾‘
+        // ÆäËûÂß¼­
     }
-    // éå†æ‰€æœ‰ç½‘ç»œï¼Œè°ƒç”¨å„è‡ªçš„drawå‡½æ•°ï¼Œå®Œæˆæ¨¡å‹ç»˜åˆ¶
+    // ±éÀúËùÓĞÍøÂç£¬µ÷ÓÃ¸÷×ÔµÄdrawº¯Êı£¬Íê³ÉÄ£ĞÍ»æÖÆ
     void Draw(Shader& shader)
     {
         for (unsigned int i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
     }
 
-    // ç§»åŠ¨æ¨¡å‹
+    // ÒÆ¶¯Ä£ĞÍ
     void Move(Camera_Movement direction, float deltaTime)
     {
         cout << this << endl;
@@ -103,13 +103,13 @@ public:
         if (direction == RIGHT)
             this->position += Right * velocity;
         if (direction == UP)
-            this->position += Up * velocity; // å‘ä¸Šç§»åŠ¨
+            this->position += Up * velocity; // ÏòÉÏÒÆ¶¯
         if (direction == DOWN)
-            this->position -= Up * velocity; // å‘ä¸‹ç§»åŠ¨
+            this->position -= Up * velocity; // ÏòÏÂÒÆ¶¯
         //cout << "position:" << this->position << endl;
     }
 
-    // æ—‹è½¬æ¨¡å‹
+    // Ğı×ªÄ£ĞÍ
     void Rotate(float angle, const glm::vec3& axis)
     {
         CalculateBoundingBox();
@@ -117,7 +117,7 @@ public:
         rotation += glm::vec3(angle * axis.x, angle * axis.y, angle * axis.z);
     }
 
-    // ç¼©æ”¾æ¨¡å‹
+    // Ëõ·ÅÄ£ĞÍ
     void Scale(float factor)
     {
         CalculateBoundingBox();
@@ -125,7 +125,7 @@ public:
         scale *= factor;
     }
 
-    // è®¡ç®—åŒ…å›´ç›’
+    // ¼ÆËã°üÎ§ºĞ
     void CalculateBoundingBox() {
         boundingBoxMin = glm::vec3(FLT_MAX);
         boundingBoxMax = glm::vec3(-FLT_MAX);
@@ -134,7 +134,7 @@ public:
 
         for (const auto& mesh : meshes) {
             for (const auto& vertex : mesh.vertices) {
-                // è½¬æ¢åˆ°ä¸–ç•Œç©ºé—´
+                // ×ª»»µ½ÊÀ½ç¿Õ¼ä
                 glm::vec4 worldPos = modelMatrix * glm::vec4(vertex.Position, 1.0f);
                 boundingBoxMin = glm::min(boundingBoxMin, glm::vec3(worldPos));
                 boundingBoxMax = glm::max(boundingBoxMax, glm::vec3(worldPos));
@@ -147,9 +147,9 @@ public:
         return boundingBoxMax.y - boundingBoxMin.y;
     }
 
-    // å°„çº¿ä¸åŒ…å›´ç›’ç›¸äº¤æ£€æµ‹
+    // ÉäÏßÓë°üÎ§ºĞÏà½»¼ì²â
     bool Intersects(const glm::vec3& rayOrigin, const glm::vec3& rayDir) {
-        CalculateBoundingBox(); // è®¡ç®—åŒ…å›´ç›’
+        CalculateBoundingBox(); // ¼ÆËã°üÎ§ºĞ
         updateVectors();
         cout << "boundingboxMax" << boundingBoxMax.b << endl;
         cout<<"boundingboxmin"<< boundingBoxMin.b << endl;
@@ -167,7 +167,7 @@ public:
     }
 
     glm::vec3 GetIntersectionPoint(const glm::vec3& rayOrigin, const glm::vec3& rayDir) {
-        CalculateBoundingBox(); // è®¡ç®—åŒ…å›´ç›’
+        CalculateBoundingBox(); // ¼ÆËã°üÎ§ºĞ
         updateVectors();
         glm::vec3 invDir = 1.0f / rayDir;
         glm::vec3 tMin = (boundingBoxMin - rayOrigin) * invDir;
@@ -179,53 +179,53 @@ public:
         float tNear = glm::max(glm::max(t1.x, t1.y), t1.z);
         float tFar = glm::min(glm::min(t2.x, t2.y), t2.z);
 
-        // å¦‚æœå°„çº¿ä¸åŒ…å›´ç›’ç›¸äº¤ï¼Œåˆ™è¿”å›äº¤ç‚¹
+        // Èç¹ûÉäÏßÓë°üÎ§ºĞÏà½»£¬Ôò·µ»Ø½»µã
         if (tNear <= tFar && tFar > 0.0f) {
-            // è®¡ç®—å°„çº¿çš„äº¤ç‚¹
-            glm::vec3 intersectionPoint = rayOrigin + rayDir * tNear;  // æˆ–ä½¿ç”¨ tFar ä½œä¸ºè¿œäº¤ç‚¹
+            // ¼ÆËãÉäÏßµÄ½»µã
+            glm::vec3 intersectionPoint = rayOrigin + rayDir * tNear;  // »òÊ¹ÓÃ tFar ×÷ÎªÔ¶½»µã
             return intersectionPoint;
         }
 
-        return glm::vec3(FLT_MAX);  // è¿”å›ä¸€ä¸ªæ— æ•ˆç‚¹è¡¨ç¤ºæ²¡æœ‰äº¤ç‚¹
+        return glm::vec3(FLT_MAX);  // ·µ»ØÒ»¸öÎŞĞ§µã±íÊ¾Ã»ÓĞ½»µã
     }
 
 
-    // é€‰æ‹©æ¨¡å‹
+    // Ñ¡ÔñÄ£ĞÍ
     void Select() {
         isSelected = true;
     }
 
-    // å–æ¶ˆé€‰æ‹©
+    // È¡ÏûÑ¡Ôñ
     void Deselect() {
         isSelected = false;
     }
 
 
-    // è·å–æ¨¡å‹çš„å˜æ¢çŸ©é˜µ
+    // »ñÈ¡Ä£ĞÍµÄ±ä»»¾ØÕó
     glm::mat4 GetModelMatrix() const
     {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, position);
-        model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // æ—‹è½¬
-        model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // æ—‹è½¬
-        model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // æ—‹è½¬
-        model = glm::scale(model, scale);  // ç¼©æ”¾
+        model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)); // Ğı×ª
+        model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)); // Ğı×ª
+        model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)); // Ğı×ª
+        model = glm::scale(model, scale);  // Ëõ·Å
         return model;
     }
 
 
 private:
-    // loadModel ä½¿ç”¨assimpåŠ è½½æ¨¡å‹
-    const Camera& camera;  // æŒæœ‰Cameraçš„å¼•ç”¨
+    // loadModel Ê¹ÓÃassimp¼ÓÔØÄ£ĞÍ
+    const Camera& camera;  // ³ÖÓĞCameraµÄÒıÓÃ
     void loadModel(string const& path)
     {
         //cout << path << endl;
-        //åœ¨Assimpçš„å‘½åç©ºé—´é‡Œ ç”¨ä¸ªimporter è°ƒç”¨read fileå‡½æ•°
+        //ÔÚAssimpµÄÃüÃû¿Õ¼äÀï ÓÃ¸öimporter µ÷ÓÃread fileº¯Êı
         Assimp::Importer importer;
-        //ç¬¬äºŒä¸ªå‚æ•°æ˜¯ä¸€ä¸ªåæœŸå¤„ç†çš„é€‰é¡¹ 
-        //aiProcess_Triangulate å¦‚æœæ¨¡å‹ä¸æ˜¯å…¨éƒ¨ç”±ä¸‰è§’è¡Œç»„æˆï¼Œå°†æ‰€æœ‰å›¾å…ƒå½¢çŠ¶å˜ä¸ºä¸‰è§’å½¢
-        //aiProcess_FlipUVs ç¿»è½¬yè½´çš„çº¹ç†åæ ‡ 
-        //aiProcess_GenSmoothNormals å¦‚æœæ²¡æœ‰æ³•å‘é‡ï¼Œç»™æ¯ä¸ªé¡¶ç‚¹åˆ›å»ºæ³•çº¿
+        //µÚ¶ş¸ö²ÎÊıÊÇÒ»¸öºóÆÚ´¦ÀíµÄÑ¡Ïî 
+        //aiProcess_Triangulate Èç¹ûÄ£ĞÍ²»ÊÇÈ«²¿ÓÉÈı½ÇĞĞ×é³É£¬½«ËùÓĞÍ¼ÔªĞÎ×´±äÎªÈı½ÇĞÎ
+        //aiProcess_FlipUVs ·­×ªyÖáµÄÎÆÀí×ø±ê 
+        //aiProcess_GenSmoothNormals Èç¹ûÃ»ÓĞ·¨ÏòÁ¿£¬¸øÃ¿¸ö¶¥µã´´½¨·¨Ïß
         //aiProcess_SplitLargeMeshes
         //aiProcess_OptimizeMeshes
         const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
@@ -239,28 +239,28 @@ private:
         directory = path.substr(0, path.find_last_of('/'));
         cout << directory << endl;
         // process ASSIMP's root node recursively
-        //æ¯ä¸ªèŠ‚ç‚¹å¯èƒ½åŒ…å«å¤šä¸ªå­èŠ‚ç‚¹ï¼Œæ‰€ä»¥ å…ˆå¤„ç†å‚æ•°ä¸­çš„èŠ‚ç‚¹ å†å¤„ç†æ‰€æœ‰çš„å­èŠ‚ç‚¹ 
-        //ç¬¦åˆé€’å½’ç»“æ„
+        //Ã¿¸ö½Úµã¿ÉÄÜ°üº¬¶à¸ö×Ó½Úµã£¬ËùÒÔ ÏÈ´¦Àí²ÎÊıÖĞµÄ½Úµã ÔÙ´¦ÀíËùÓĞµÄ×Ó½Úµã 
+        //·ûºÏµİ¹é½á¹¹
         processNode(scene->mRootNode, scene);
     }
 
-    //assimpç»“æ„ï¼Œæ¯ä¸ªèŠ‚ç‚¹åŒ…å«äº†ä¸€ç³»åˆ—çš„ç½‘æ ¼ç´¢å¼• æ¯ä¸ªç´¢å¼•æŒ‡å‘åœºæ™¯å¯¹è±¡çš„ç‰¹å®šç½‘ç»œ
+    //assimp½á¹¹£¬Ã¿¸ö½Úµã°üº¬ÁËÒ»ÏµÁĞµÄÍø¸ñË÷Òı Ã¿¸öË÷ÒıÖ¸Ïò³¡¾°¶ÔÏóµÄÌØ¶¨ÍøÂç
     // processes a node in a recursive fashion. Processes each individual mesh located at the node and repeats this process on its children nodes (if any).
     void processNode(aiNode* node, const aiScene* scene)
     {
         // process each mesh located at the current node
-        //å¤„ç†æ‰€æœ‰çš„ç½‘ç»œ
+        //´¦ÀíËùÓĞµÄÍøÂç
         for (unsigned int i = 0; i < node->mNumMeshes; i++)
         {
             // the node object only contains indices to index the actual objects in the scene. 
             // the scene contains all the data, node is just to keep stuff organized (like relations between nodes).
-           //å…ˆå»ºç«‹ä¸€ä¸ªç½‘æ ¼ç´¢å¼• 
+           //ÏÈ½¨Á¢Ò»¸öÍø¸ñË÷Òı 
             aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-            //ç´¢å¼•åœºæ™¯ä¸­çš„mMeshes å¾—åˆ°å¯¹åº”çš„ç½‘ç»œ  
-            //è¿”å›çš„ç½‘æ ¼ ç»™äº† process mesh  è¿”å›ä¸€ä¸ªmeshå¯¹è±¡ï¼Œå­˜åœ¨meshesåˆ—è¡¨é‡Œ
+            //Ë÷Òı³¡¾°ÖĞµÄmMeshes µÃµ½¶ÔÓ¦µÄÍøÂç  
+            //·µ»ØµÄÍø¸ñ ¸øÁË process mesh  ·µ»ØÒ»¸ömesh¶ÔÏó£¬´æÔÚmeshesÁĞ±íÀï
             meshes.push_back(processMesh(mesh, scene));
         }
-        //ç„¶åçœ‹çœ‹å„¿å­
+        //È»ºó¿´¿´¶ù×Ó
         // after we've processed all of the meshes (if any) we then recursively process each of the children nodes
         for (unsigned int i = 0; i < node->mNumChildren; i++)
         {
@@ -280,7 +280,7 @@ private:
         for (unsigned int i = 0; i < mesh->mNumVertices; i++)
         {
             Vertex vertex;
-            //å¤„ç†é¡¶ç‚¹ä½ç½® æ³•çº¿ çº¹ç†åæ ‡
+            //´¦Àí¶¥µãÎ»ÖÃ ·¨Ïß ÎÆÀí×ø±ê
             glm::vec3 vector; // we declare a placeholder vector since assimp uses its own vector class that doesn't directly convert to glm's vec3 class so we transfer the data to this placeholder glm::vec3 first.
             // positions
             vector.x = mesh->mVertices[i].x;
@@ -320,20 +320,20 @@ private:
 
             vertices.push_back(vertex);
         }
-        //å¤„ç†ç´¢å¼• æ¯ä¸ªç½‘æ ¼ éƒ½æœ‰é¢ æ•°ç»„ ï¼Œæ¯ä¸ªé¢ä»£è¡¨ä¸€ä¸ªå›¾å…ƒ
-        // //ä¸€ä¸ªé¢æœ‰å¤šä¸ªç´¢å¼• é‚£ä¹ˆåº”è¯¥æŒ‰ä»€ä¹ˆé¡ºåºç»˜åˆ¶å“ªä¸ªé¡¶ç‚¹
+        //´¦ÀíË÷Òı Ã¿¸öÍø¸ñ ¶¼ÓĞÃæ Êı×é £¬Ã¿¸öÃæ´ú±íÒ»¸öÍ¼Ôª
+        // //Ò»¸öÃæÓĞ¶à¸öË÷Òı ÄÇÃ´Ó¦¸Ã°´Ê²Ã´Ë³Ğò»æÖÆÄÄ¸ö¶¥µã
         // now wak through each of the mesh's faces (a face is a mesh its triangle) and retrieve the corresponding vertex indices.
         for (unsigned int i = 0; i < mesh->mNumFaces; i++)
         {
             aiFace face = mesh->mFaces[i];
-            //å­˜åˆ°indices è¿™ä¸ªvector
+            //´æµ½indices Õâ¸övector
             // retrieve all indices of the face and store them in the indices vector
             for (unsigned int j = 0; j < face.mNumIndices; j++)
                 indices.push_back(face.mIndices[j]);
         }
         // process materials
 
-        //å¤„ç†æè´¨
+        //´¦Àí²ÄÖÊ
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
         // we assume a convention for sampler names in the shaders. Each diffuse texture should be named
         // as 'texture_diffuseN' where N is a sequential number ranging from 1 to MAX_SAMPLER_NUMBER. 
@@ -342,8 +342,8 @@ private:
         // specular: texture_specularN
         // normal: texture_normalN
 
-        //loadMaterialTextures è·å–çº¹ç† è¿”å›vector 
-        // çº¹ç†éƒ½ä»¥aiTextureType_ ä¸ºå‰ç¼€
+        //loadMaterialTextures »ñÈ¡ÎÆÀí ·µ»Øvector 
+        // ÎÆÀí¶¼ÒÔaiTextureType_ ÎªÇ°×º
         // 1. diffuse maps
         vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());

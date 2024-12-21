@@ -13,13 +13,13 @@ float FBM(float x, float y, int layers);  // 分形布朗运动噪声函数
 glm::vec3 calcNormal(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3);
 class HeightMap {
 public:
-    static void GenerateTerrainFromHeightMap(const std::string& heightMapPath,
+    static void GenerateTerrainFromHeightMap(int& width,int& height,const std::string& heightMapPath,
         float heightScale, float gridSpacing,
         std::vector<Vertex>& vertices,
         std::vector<unsigned int>& indices,
         int fbmLayers = 4) {
 
-        int width, height, channels;
+        int channels;
         unsigned char* data = stbi_load(heightMapPath.c_str(), &width, &height, &channels, 1); // Load as grayscale
 
         if (!data) {
@@ -35,7 +35,7 @@ public:
 
                 // 应用分形布朗运动噪声以优化地形
                 float fbmNoise = FBM(x * 0.1f, z * 0.1f, fbmLayers);
-                fbmNoise = fbmNoise * 0.5f - 2.0f;
+                fbmNoise = fbmNoise * 0.5f - 1.0f;
                 h += fbmNoise * heightScale;
 
 

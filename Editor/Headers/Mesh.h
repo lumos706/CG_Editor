@@ -52,9 +52,11 @@ public:
     Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
     {
         this->vertices = vertices;
+        //cout << vertices.size() << endl;
         this->indices = indices;
+        //cout << indices.size() << endl;
         this->textures = textures;
-
+        //cout << textures.size() << endl;
         // now that we have all the required data, set the vertex buffers and its attribute pointers.
         setupMesh();
     }
@@ -75,6 +77,10 @@ public:
             glActiveTexture(GL_TEXTURE0 + i); // active proper texture unit before binding
             // »ñÈ¡ÎÆÀíÐòºÅ
             string number;
+            /*if (textures[i].type.empty()) {
+                std::cerr << "Texture type is not set!" << std::endl;
+                return;
+            }*/
             string name = textures[i].type;
             if (name == "texture_diffuse")
                 number = std::to_string(diffuseNr++);
