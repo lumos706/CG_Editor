@@ -39,7 +39,7 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 //models
-std::vector<Model*> models;  // å­˜å‚¨æ‰€æœ‰æ¨¡å‹çš„åˆ—è¡¨
+std::vector<Model*> models;  // ´æ´¢ËùÓĞÄ£ĞÍµÄÁĞ±í
 Model init(camera);
 extern Model* selectedModel = &init;
 
@@ -52,7 +52,7 @@ glm::vec3 pointLightPositions[] = {
     glm::vec3(0.0f,  0.0f, -3.0f)
 };
 
-//åœ°å½¢å›¾
+//µØĞÎÍ¼
 float heightScale = 2.5f;
 float gridSpacing = 0.25f;
 std::vector<Vertex> terrainVertices;
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
     glfwSetCursorPosCallback(mWindow, mouse_callback);
     glfwSetScrollCallback(mWindow, scroll_callback);
 
-    // é¼ æ ‡
+    // Êó±ê
     glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 
@@ -108,16 +108,16 @@ int main(int argc, char* argv[]) {
     Shader terrainShader("../Editor/Shaders/heightmap.vs", "../Editor/Shaders/heightmap.fs");
     Shader lightCubeShader("../Editor/Shaders/light_cube.vs", "../Editor/Shaders/light_cube.fs");
     Shader skyBoxShader("../Editor/Shaders/skybox.vs", "../Editor/Shaders/skybox.fs");
-    // load modelsï¼Œå¦‚æœéœ€è¦å¯¼å…¥æ–°æ¨¡å‹ï¼Œåœ¨æ­¤å¢åŠ 
+    // load models£¬Èç¹ûĞèÒªµ¼ÈëĞÂÄ£ĞÍ£¬ÔÚ´ËÔö¼Ó
     // -----------
     Model tentmodel(camera,"../Editor/Models/lowpolytent.obj");
     //cout << "tentmodel:" << &tentmodel << endl;
     models.push_back(&tentmodel);
 
-    Model treemodel(camera, "../Editor/Models/Tree.obj");
+    Model treemodel(camera, "../Editor/Models/oakTree.obj");
     models.push_back(&treemodel);
 
-    Model treemodel_2(camera, "../Editor/Models/Tree.obj");
+    Model treemodel_2(camera, "../Editor/Models/pineTree.obj");
     models.push_back(&treemodel_2);
     /*string path1 = "C:/Users/10559/Desktop/Study/Three/CG/CV_Editor/Editor/Models/lowpolytent.obj";
     string path2 = "C:/Users/10559/Desktop/Study/Three/CG/CV_Editor/Editor/Models/Tree.obj";
@@ -261,7 +261,7 @@ int main(int argc, char* argv[]) {
     // Create a Mesh object for the terrain
     Mesh terrain(terrainVertices, terrainIndices, std::vector<Texture>());
     unsigned int grassTexture = loadTexture_heightmap("../Editor/Models/dark_grass.jpg");
-    // ç»‘å®šçº¹ç†åˆ°çº¹ç†å•å…ƒ 0
+    // °ó¶¨ÎÆÀíµ½ÎÆÀíµ¥Ôª 0
     
     
 
@@ -293,7 +293,7 @@ int main(int argc, char* argv[]) {
         terrainShader.setInt("texture_diffuse1", 1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, grassTexture);
-        // è®¾ç½® `texture_diffuse1` uniform æŒ‡å®šä¸ºçº¹ç†å•å…ƒ 1
+        // ÉèÖÃ `texture_diffuse1` uniform Ö¸¶¨ÎªÎÆÀíµ¥Ôª 1
 
         terrainShader.setMat4("model", model);
         terrainShader.setMat4("view", view);
@@ -363,7 +363,7 @@ int main(int argc, char* argv[]) {
 
         glDepthFunc(GL_LEQUAL);
         skyBoxShader.use();
-        // ä¼ è§†å›¾,æŠ•å½±çŸ©é˜µ
+        // ´«ÊÓÍ¼,Í¶Ó°¾ØÕó
         view = glm::mat4(glm::mat3(camera.GetViewMatrix())); // remove translation from the view matrix
         skyBoxShader.setMat4("view", view);
         skyBoxShader.setMat4("projection", projection);
@@ -404,6 +404,11 @@ int main(int argc, char* argv[]) {
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow* window)
 {
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+        for (auto& model : models) {
+            (*model).Deselect();
+        }
+    }
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
         glm::vec3 hitPoint = RayTerrainIntersection(window, terrainVertices, Width, Height, gridSpacing);
 
@@ -413,17 +418,17 @@ void processInput(GLFWwindow* window)
         Model* insertmodel = new Model(camera, selectedFile, false, hitPoint);
         float ModelHeight = (*insertmodel).GetHeight();
         (*insertmodel).position += ModelHeight / 2;
-        models.push_back(insertmodel); // å°†æŒ‡é’ˆå­˜å…¥ models å®¹å™¨ä¸­
+        models.push_back(insertmodel); // ½«Ö¸Õë´æÈë models ÈİÆ÷ÖĞ
 
         cout << ((*insertmodel).position) << endl;
         //cout << models.size();
     }
     if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
-        // æ‰§è¡Œå°„çº¿æŠ•å°„æ£€æµ‹
+        // Ö´ĞĞÉäÏßÍ¶Éä¼ì²â
         glm::vec3 hitPoint;
         if (castRay(window, hitPoint, selectedModel)) {
             std::cout << "Select()" << endl;
-            // å¦‚æœæ£€æµ‹åˆ°ç‚¹å‡»æ¨¡å‹ï¼Œæ›´æ–°é€‰ä¸­çŠ¶æ€
+            // Èç¹û¼ì²âµ½µã»÷Ä£ĞÍ£¬¸üĞÂÑ¡ÖĞ×´Ì¬
             (*selectedModel).Select();
             cout << "select_modle" << (&selectedModel) << endl;
             for (auto& model : models) {
@@ -443,7 +448,7 @@ void processInput(GLFWwindow* window)
     }
     if ((*selectedModel).isSelected) {
         //cout << "model" << endl;
-        // åªæœ‰é€‰ä¸­æ¨¡å‹æ—¶ï¼Œæ‰ç§»åŠ¨æ¨¡å‹
+        // Ö»ÓĞÑ¡ÖĞÄ£ĞÍÊ±£¬²ÅÒÆ¶¯Ä£ĞÍ
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             cout << "hello";
             //(*selectedModel).position += glm::vec3(0.0f, 0.0f, 10.0f);
@@ -463,7 +468,7 @@ void processInput(GLFWwindow* window)
             (*selectedModel).Move(DOWN, deltaTime);
     }
     else {
-    // å¦åˆ™ç»§ç»­æ§åˆ¶ç›¸æœº
+    // ·ñÔò¼ÌĞø¿ØÖÆÏà»ú
         //cout << "camera" << endl;
         
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -479,9 +484,9 @@ void processInput(GLFWwindow* window)
         camera.ProcessKeyboard(RIGHT, deltaTime);
 
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        camera.ProcessKeyboard(UP, deltaTime); // å‘ä¸Š
+        camera.ProcessKeyboard(UP, deltaTime); // ÏòÉÏ
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        camera.ProcessKeyboard(DOWN, deltaTime); // å‘ä¸‹
+        camera.ProcessKeyboard(DOWN, deltaTime); // ÏòÏÂ
     }
 }
 
@@ -494,15 +499,15 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-//æ£€æµ‹æ¨¡å‹æ˜¯å¦è¢«é€‰ä¸­
-// å°„çº¿æŠ•å°„çš„åŠŸèƒ½ï¼šä»ç›¸æœºçš„ä½ç½®å’Œæ–¹å‘å‘å°„ä¸€æ¡å°„çº¿ï¼Œå¹¶æ£€æµ‹ä¸æ¨¡å‹çš„äº¤ç‚¹
+//¼ì²âÄ£ĞÍÊÇ·ñ±»Ñ¡ÖĞ
+// ÉäÏßÍ¶ÉäµÄ¹¦ÄÜ£º´ÓÏà»úµÄÎ»ÖÃºÍ·½Ïò·¢ÉäÒ»ÌõÉäÏß£¬²¢¼ì²âÓëÄ£ĞÍµÄ½»µã
 bool castRay(GLFWwindow* window, glm::vec3& outHitPoint, Model*& selectedModel)
 {
-    // è·å–ç›¸æœºè§†è§’å’ŒæŠ•å½±çŸ©é˜µ
+    // »ñÈ¡Ïà»úÊÓ½ÇºÍÍ¶Ó°¾ØÕó
     glm::mat4 view = camera.GetViewMatrix();
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
-    // è·å–é¼ æ ‡ä½ç½®
+    // »ñÈ¡Êó±êÎ»ÖÃ
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     xpos = (xpos / SCR_WIDTH) * 2.0 - 1.0;
@@ -517,15 +522,15 @@ bool castRay(GLFWwindow* window, glm::vec3& outHitPoint, Model*& selectedModel)
     //std::cout << "rayorigin:" << rayOrigin << endl;
     glm::vec3 rayDirection = glm::normalize(rayWorldSpace);
     //std::cout << "raydirection:" << rayDirection << endl;
-    // æ£€æµ‹ä¸æ¨¡å‹çš„äº¤ç‚¹ï¼ˆå¯ä»¥ä½¿ç”¨AABBæˆ–å…¶ä»–æ–¹å¼ï¼‰
+    // ¼ì²âÓëÄ£ĞÍµÄ½»µã£¨¿ÉÒÔÊ¹ÓÃAABB»òÆäËû·½Ê½£©
     /*for (auto& model : models) {
         cout <<"model:" << model << endl;
     }*/
     for (auto& model : models) {
         if ((*model).Intersects(rayOrigin, rayDirection)) {
             cout << "some model is selected" << endl;
-            selectedModel = model;  // æ›´æ–°é€‰ä¸­çš„æ¨¡å‹
-            cout << "é€‰ä¸­åçš„selectmodel:"<<( & selectedModel) << endl;
+            selectedModel = model;  // ¸üĞÂÑ¡ÖĞµÄÄ£ĞÍ
+            cout << "Ñ¡ÖĞºóµÄselectmodel:"<<( & selectedModel) << endl;
             outHitPoint = (*model).GetIntersectionPoint(rayOrigin, rayDirection);
             return true;
         }
@@ -543,7 +548,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 
     static bool isDragging = false;
     int leftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-    int rightButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);  // æ£€æŸ¥å³é”®æ˜¯å¦æŒ‰ä¸‹
+    int rightButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);  // ¼ì²éÓÒ¼üÊÇ·ñ°´ÏÂ
     
     if (leftButtonState == GLFW_PRESS) {
         if (!isDragging) {
@@ -558,34 +563,34 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
         lastX = xpos;
         lastY = ypos;
 
-        float sensitivity = 1.0f; // è°ƒæ•´çµæ•åº¦
+        float sensitivity = 1.0f; // µ÷ÕûÁéÃô¶È
         camera.ProcessMouseMovement(xoffset * sensitivity, yoffset * sensitivity);
     }
-    if (rightButtonState == GLFW_PRESS) {  // å¦‚æœå³é”®æŒ‰ä¸‹
+    if (rightButtonState == GLFW_PRESS) {  // Èç¹ûÓÒ¼ü°´ÏÂ
         if (!isDragging) {
             isDragging = true;
             lastX = xpos;
             lastY = ypos;
         }
 
-        // è®¡ç®—é¼ æ ‡ç§»åŠ¨çš„åç§»é‡
+        // ¼ÆËãÊó±êÒÆ¶¯µÄÆ«ÒÆÁ¿
         float xoffset = xpos - lastX;
         float yoffset = lastY - ypos;
 
         lastX = xpos;
         lastY = ypos;
 
-        // è®¾ç½®æ—‹è½¬çµæ•åº¦
+        // ÉèÖÃĞı×ªÁéÃô¶È
         float sensitivity = 1.0f;
 
-        // æ ¹æ®é¼ æ ‡çš„ç§»åŠ¨é‡æ—‹è½¬æ¨¡å‹
+        // ¸ù¾İÊó±êµÄÒÆ¶¯Á¿Ğı×ªÄ£ĞÍ
         if (selectedModel) {
-            // æ ¹æ®é¼ æ ‡çš„æ°´å¹³å’Œå‚ç›´åç§»é‡æ¥æ—‹è½¬æ¨¡å‹
-            (*selectedModel).Rotate(xoffset * sensitivity, glm::vec3(0.0f, 1.0f, 0.0f));  // ç»•Yè½´æ—‹è½¬
-            (*selectedModel).Rotate(yoffset * sensitivity, glm::vec3(-1.0f, 0.0f, 0.0f));  // ç»•Xè½´æ—‹è½¬
+            // ¸ù¾İÊó±êµÄË®Æ½ºÍ´¹Ö±Æ«ÒÆÁ¿À´Ğı×ªÄ£ĞÍ
+            (*selectedModel).Rotate(xoffset * sensitivity, glm::vec3(0.0f, 1.0f, 0.0f));  // ÈÆYÖáĞı×ª
+            //(*selectedModel).Rotate(yoffset * sensitivity, glm::vec3(-1.0f, 0.0f, 0.0f));  // ÈÆXÖáĞı×ª
         }
     }
-    if (rightButtonState == GLFW_RELEASE&&leftButtonState == GLFW_RELEASE) {  // å¦‚æœå³é”®é‡Šæ”¾
+    if (rightButtonState == GLFW_RELEASE&&leftButtonState == GLFW_RELEASE) {  // Èç¹ûÓÒ¼üÊÍ·Å
         isDragging = false;
     }
 }
@@ -598,8 +603,8 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     if ((*selectedModel).isSelected) {
-        // åªæœ‰é€‰ä¸­çš„æ¨¡å‹æ‰è¿›è¡Œç¼©æ”¾
-        float scaleFactor = 1.0f + static_cast<float>(yoffset) * 0.1f; // ç¼©æ”¾ç³»æ•°
+        // Ö»ÓĞÑ¡ÖĞµÄÄ£ĞÍ²Å½øĞĞËõ·Å
+        float scaleFactor = 1.0f + static_cast<float>(yoffset) * 0.1f; // Ëõ·ÅÏµÊı
         (*selectedModel).Scale(scaleFactor);
     }
     else {
@@ -610,7 +615,7 @@ void setCube(float* vertices)
 {
 
 }
-// åŠ è½½çº¹ç†å‡½æ•°
+// ¼ÓÔØÎÆÀíº¯Êı
 unsigned int loadTexture_heightmap(const char* path) {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -631,7 +636,7 @@ unsigned int loadTexture_heightmap(const char* path) {
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        // è®¾ç½®çº¹ç†å‚æ•°
+        // ÉèÖÃÎÆÀí²ÎÊı
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -682,19 +687,19 @@ glm::vec3 RayTerrainIntersection(
     int height,
     float gridSpacing)
 {
-    // è·å–ç›¸æœºè§†è§’å’ŒæŠ•å½±çŸ©é˜µ
+    // »ñÈ¡Ïà»úÊÓ½ÇºÍÍ¶Ó°¾ØÕó
     glm::mat4 view = camera.GetViewMatrix();
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom),
         (float)SCR_WIDTH / (float)SCR_HEIGHT,
         0.1f, 100.0f);
 
-    // è·å–é¼ æ ‡ä½ç½®
+    // »ñÈ¡Êó±êÎ»ÖÃ
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     xpos = (xpos / SCR_WIDTH) * 2.0 - 1.0;
     ypos = -(ypos / SCR_HEIGHT) * 2.0 + 1.0;
 
-    // å°†é¼ æ ‡ä½ç½®ä»è£å‰ªåæ ‡ç³»è½¬æ¢åˆ°ä¸–ç•Œåæ ‡ç³»
+    // ½«Êó±êÎ»ÖÃ´Ó²Ã¼ô×ø±êÏµ×ª»»µ½ÊÀ½ç×ø±êÏµ
     glm::vec4 rayClipSpace = glm::vec4(xpos, ypos, -1.0f, 1.0f);
     glm::vec4 rayEyeSpace = glm::inverse(projection) * rayClipSpace;
     rayEyeSpace = glm::vec4(rayEyeSpace.x, rayEyeSpace.y, -1.0f, 0.0f);
@@ -702,7 +707,7 @@ glm::vec3 RayTerrainIntersection(
     glm::vec3 rayWorldSpace = glm::vec3(glm::inverse(view) * rayEyeSpace);
     glm::vec3 rayOrigin = camera.Position;
     glm::vec3 rayDirection = glm::normalize(rayWorldSpace);
-    // è®¾ç½®åˆå§‹æ­¥é•¿å’Œæœ€å¤§è¿­ä»£æ¬¡æ•°
+    // ÉèÖÃ³õÊ¼²½³¤ºÍ×î´óµü´ú´ÎÊı
     float tMin = 0.0f, tMax = 1000.0f;
     const int maxIterations = 100;
 
@@ -710,23 +715,23 @@ glm::vec3 RayTerrainIntersection(
         float tMid = (tMin + tMax) * 0.5f;
         glm::vec3 currentPoint = rayOrigin + tMid * rayDirection;
 
-        // è·å–ç½‘æ ¼åæ ‡
+        // »ñÈ¡Íø¸ñ×ø±ê
         int x = static_cast<int>((currentPoint.x + (width * gridSpacing / 2.0f)) / gridSpacing);
         int z = static_cast<int>((currentPoint.z + (height * gridSpacing / 2.0f)) / gridSpacing);
 
-        // åˆ¤æ–­æ˜¯å¦è¶Šç•Œ
+        // ÅĞ¶ÏÊÇ·ñÔ½½ç
         if (x < 0 || x >= width - 1 || z < 0 || z >= height - 1) {
-            tMax = tMid; // è¶…å‡ºèŒƒå›´ï¼Œå‘è¾ƒå°tæ–¹å‘æ”¶ç¼©
+            tMax = tMid; // ³¬³ö·¶Î§£¬Ïò½ÏĞ¡t·½ÏòÊÕËõ
             continue;
         }
 
-        // è·å–å‘¨å›´çš„é«˜åº¦ç‚¹
+        // »ñÈ¡ÖÜÎ§µÄ¸ß¶Èµã
         float h00 = vertices[z * width + x].Position.y;
         float h10 = vertices[z * width + (x + 1)].Position.y;
         float h01 = vertices[(z + 1) * width + x].Position.y;
         float h11 = vertices[(z + 1) * width + (x + 1)].Position.y;
 
-        // è®¡ç®—åŒçº¿æ€§æ’å€¼é«˜åº¦
+        // ¼ÆËãË«ÏßĞÔ²åÖµ¸ß¶È
         float localX = (currentPoint.x + (width * gridSpacing / 2.0f)) / gridSpacing - x;
         float localZ = (currentPoint.z + (height * gridSpacing / 2.0f)) / gridSpacing - z;
         float interpolatedHeight = h00 * (1 - localX) * (1 - localZ)
@@ -734,22 +739,22 @@ glm::vec3 RayTerrainIntersection(
             + h01 * (1 - localX) * localZ
             + h11 * localX * localZ;
 
-        // æ£€æŸ¥å½“å‰ç‚¹æ˜¯å¦ä¸åœ°å½¢ç›¸äº¤
+        // ¼ì²éµ±Ç°µãÊÇ·ñÓëµØĞÎÏà½»
         if (currentPoint.y < interpolatedHeight) {
-            tMax = tMid; // å½“å‰ç‚¹ä½äºåœ°å½¢ï¼Œç¼©å°èŒƒå›´
+            tMax = tMid; // µ±Ç°µãµÍÓÚµØĞÎ£¬ËõĞ¡·¶Î§
         }
         else {
-            tMin = tMid; // å½“å‰ç‚¹é«˜äºåœ°å½¢ï¼Œå¢åŠ èŒƒå›´
+            tMin = tMid; // µ±Ç°µã¸ßÓÚµØĞÎ£¬Ôö¼Ó·¶Î§
         }
 
-        // æ”¶æ•›æ¡ä»¶ï¼štèŒƒå›´è¶³å¤Ÿå°
+        // ÊÕÁ²Ìõ¼ş£ºt·¶Î§×ã¹»Ğ¡
         if (glm::abs(tMax - tMin) < 0.01f) {
             cout << "find!" << currentPoint << endl;
             return currentPoint;
         }
     }
 
-    // å¦‚æœè¿­ä»£ç»“æŸåæœªæ‰¾åˆ°äº¤ç‚¹ï¼Œè¿”å›ç©ºå€¼
+    // Èç¹ûµü´ú½áÊøºóÎ´ÕÒµ½½»µã£¬·µ»Ø¿ÕÖµ
     cout << "don't find!" << endl;
     return glm::vec3(0.0f, 0.0f, 0.0f);
 }
