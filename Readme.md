@@ -66,3 +66,6 @@ CG_Editor ———— 小组开发的基于OpenGL的场景编辑器。
 ## 还未实现的功能
 - 用户友好的UI界面（可能要基于QT开发）
 - 优化代码运行效率，提高帧率
+
+## Stargazers over time
+[![Stargazers over time](https://starchart.cc/lumos706/CG_Editor.svg?variant=adaptive)](https://starchart.cc/lumos706/CG_Editor)
