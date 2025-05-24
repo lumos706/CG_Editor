@@ -1,4 +1,6 @@
-# CG_Editor
+# CG_Editor              
+![visitors](https://visitor-badge.laobi.icu/badge?page_id=Lumos706.CG_Editor)
+
 第十小组
 
 组长：马清扬
